@@ -8,16 +8,6 @@
 #define BUFSIZE 256
 
 void recur_write(int fd,char* buf,int size_read,int wrote_size);
-void fd_check(int fd,char *name){
-        if (fd == -1){
-            printf("fd = %d, errno=%d,filename = %s\n", fd, errno,name);
-            exit(0);
-        }
-        
-        else {
-            printf("%s open succeeded\n",name);
-        }
-}
 
 void deal_write_error(int fd){
     if(errno == EDQUOT){
@@ -29,7 +19,7 @@ void deal_write_error(int fd){
     }
  
     close(fd);
-    exit(0)
+    exit(0);
 }
 
 void recur_write(int fd,char* buf,int size_read,int wrote_size){
@@ -62,9 +52,12 @@ int main(int argc, char *argv[]){
     int break_flag = 0;
     size_t size_read = 0;
     size_t size_write = 0;
+    struct stat *buf_stat;
     //scanf("%s",namebuf);
     fd_in = open(in_filename, O_RDONLY);
-    fd_out = open(out_filename,O_CREAT|O_RDWR);
+    fstat(fd_in,buf_stat);
+    mode_t permission = buf_stat->st_mode;
+    fd_out = open(out_filename,O_RDWR|O_CREAT,permission);
     fd_check(fd_in,in_filename);
     fd_check(fd_out,out_filename);
     while(1){
