@@ -5,8 +5,6 @@
 #include "shell_security.h"
 #define SHELL_BUF_SIZE 2000
 #define TOK_DELIM " \t\r\n\a"
-
-
 void exit_shell();
 void shell_loop(char **);
 char * shell_read_line();

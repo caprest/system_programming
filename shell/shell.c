@@ -140,15 +140,31 @@ void execute_process(process *p,secoption *option,char *envp[]){
             int f_network = 0;
             int f_redirect = 0;
             int f_stdout = 0;
+            int f_reset = 0;
             while(p_arg[0]){
-                if (strcmp(p_arg[0],"network" ) == 0) f_network = 1;
-                else if (strcmp(p_arg[0],"redirect") ==0) f_redirect =1;
-                else if (strcmp(p_arg[0],"stdout") == 0) f_stdout = 1;
-                else if (strcmp(p_arg[0],"reset") == 0) break;
+                if (strcmp(p_arg[0],"network" ) == 0){
+                 f_network = 1;
+                }    
+                else if (strcmp(p_arg[0],"redirect") ==0) {
+                    f_redirect =1;
+                }
+                else if (strcmp(p_arg[0],"stdout") == 0) {
+                    f_stdout = 1;
+                }
+                else if (strcmp(p_arg[0],"reset") == 0){
+
+                 f_reset =1; break;
+                }
                 p_arg++;
             }
             set_secoption(option,f_network,f_stdout,f_redirect);
-
+            if (f_reset == 0){
+            printf("Seccomp activated network = %d,stdout = %d,reset = %d\n",
+                        option->network,option->w_stdout,option->w_redirect);
+            }
+            else{
+                printf("Seccomp Resetted\n");
+            }
         }
         else fork_process(p,pid,fd_array,0,0,0,envp,option);
     }
@@ -208,7 +224,7 @@ void fork_process(process * p,int *pid,int **fd_array,int flag_in,int flag_out, 
                 printf("file not exist %s\n",p->program_name);
                 exit(0);
             }
-            int rsec = set_security_option(option,&fd1);
+            int rsec = set_seccomp(option,fd1);
             if (rsec <0) printf("failed seccomp \n");
             execve(p->program_name,p->argument_list,envp);
         }
