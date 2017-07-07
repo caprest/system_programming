@@ -1,2 +1,6 @@
 *.out
 *.o
+*.gch
+2/mywc
+2/myls
+2/mycp
