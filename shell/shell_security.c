@@ -32,15 +32,15 @@ int set_seccomp(secoption *option){
 
 int  seccomp_forbid_network(scmp_filter_ctx *ctx){
     int rc = -1;
-    rc = seccomp_rule_add(ctx,SCMP_ACT_TRAP,SCMP_SYS(socket),0);
+    rc = seccomp_rule_add(ctx,SCMP_ACT_KILL,SCMP_SYS(socket),0);
     return rc;
 }
 
 int seccomp_forbid_write(scmp_filter_ctx *ctx, secoption *option){
     int rc = 1;
-    rc = seccomp_rule_add(ctx, SCMP_ACT_TRAP, SCMP_SYS(write), 1,SCMP_CMP(0, SCMP_CMP_NE, 1));
+    rc = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(write), 1,SCMP_CMP(0, SCMP_CMP_NE, 1));
     if (option->w_stdout){
-        rc = seccomp_rule_add(ctx, SCMP_ACT_TRAP,SCMP_SYS(dup2),0);
+        rc = seccomp_rule_add(ctx, SCMP_ACT_KILL,SCMP_SYS(dup2),0);
     }
     return rc;
 }

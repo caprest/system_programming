@@ -211,11 +211,13 @@ void fork_process(process * p,int *pid,int **fd_array,int flag_in,int flag_out, 
     if((pid[i] = fork()) == 0){
             int fd1 = -1 ;
             int fd2 = -1;
+            /*
             struct sigaction sa;
             sa.sa_sigaction = child_handler;
             sa.sa_flags = SA_RESTART; 
             sigaction(SIGSYS, &sa, 0);
             sigaction(SIGINT, &sa,0 );
+            */
             if (p->output_redirection && option->w_stdout){
                 printf("Redirect is forbidden\n");
                 exit(0);
