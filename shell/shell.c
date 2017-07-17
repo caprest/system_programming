@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <seccomp.h>
+#include <signal.h>
 #include "parse.h"
 #include "shell_security.h"
 #include "shell.h"
@@ -142,13 +143,13 @@ void execute_process(process *p,secoption *option,char *envp[]){
             int f_stdout = 0;
             int f_reset = 0;
             while(p_arg[0]){
-                if (strcmp(p_arg[0],"network" ) == 0){
+                if (strcmp(p_arg[0],"no-network" ) == 0){
                  f_network = 1;
                 }    
-                else if (strcmp(p_arg[0],"redirect") ==0) {
+                else if (strcmp(p_arg[0],"only-redirect") ==0) {
                     f_redirect =1;
                 }
-                else if (strcmp(p_arg[0],"stdout") == 0) {
+                else if (strcmp(p_arg[0],"only-stdout") == 0) {
                     f_stdout = 1;
                 }
                 else if (strcmp(p_arg[0],"reset") == 0){
@@ -159,7 +160,7 @@ void execute_process(process *p,secoption *option,char *envp[]){
             }
             set_secoption(option,f_network,f_stdout,f_redirect);
             if (f_reset == 0){
-            printf("Seccomp activated network = %d,stdout = %d,reset = %d\n",
+                printf("Seccomp activated. no-network = %d,stdout = %d,redirect = %d\n",
                         option->network,option->w_stdout,option->w_redirect);
             }
             else{
@@ -168,8 +169,17 @@ void execute_process(process *p,secoption *option,char *envp[]){
         }
         else fork_process(p,pid,fd_array,0,0,0,envp,option);
     }
+    int flag_sigint = 0;
     for(i = 0; i < n_process;i++){
         waitpid(-1,&status,WUNTRACED);
+        if (status == EXIT_SECCOMP * 256){
+            printf("Process exited with seccomp\n");
+            printf("Seccomp Setting. no-network = %d,stdout = %d,redirect = %d\n",
+                        option->network,option->w_stdout,option->w_redirect);
+            }
+        if (status == EXIT_SIGINT *256 && flag_sigint == 0){
+            printf("Keyboard Interruption\n");
+        }
     }
     for (i = 0;i <n_process-1;i++){
         close(fd_array[i][0]);
@@ -199,8 +209,17 @@ void mem_check(void * mem){
 
 void fork_process(process * p,int *pid,int **fd_array,int flag_in,int flag_out, int i,char *envp[],secoption *option){
     if((pid[i] = fork()) == 0){
-            int fd1,fd2;
-     
+            int fd1 = -1 ;
+            int fd2 = -1;
+            struct sigaction sa;
+            sa.sa_sigaction = child_handler;
+            sa.sa_flags = SA_RESTART; 
+            sigaction(SIGSYS, &sa, 0);
+            sigaction(SIGINT, &sa,0 );
+            if (p->output_redirection && option->w_stdout){
+                printf("Redirect is forbidden\n");
+                exit(0);
+            }
             if (p->output_redirection){
                 fd1 = open(p->output_redirection,O_WRONLY|O_CREAT|O_TRUNC,S_IRWXU);
                 dup2(fd1, 1);
@@ -224,14 +243,33 @@ void fork_process(process * p,int *pid,int **fd_array,int flag_in,int flag_out, 
                 printf("file not exist %s\n",p->program_name);
                 exit(0);
             }
-            int rsec = set_seccomp(option,fd1);
-            if (rsec <0) printf("failed seccomp \n");
+            int rsec = set_seccomp(option);
+            if (rsec <0) {
+                printf("failed seccomp \n");
+                exit(1);
+            }
             execve(p->program_name,p->argument_list,envp);
         }
-} 
+}
+void child_handler(int num,siginfo_t *info, void *hoge) {
+        if (info->si_signo == SIGSYS){
+            _exit(EXIT_SECCOMP);
+        }
+        if (info->si_signo == SIGINT){
+            _exit(EXIT_SIGINT);
+        }
+}
 
-int main ( int argc, char *argv[], char *envp[] )
-{
+void parent_handler(int num,siginfo_t *info, void *hoge){
+
+}
+
+int main ( int argc, char *argv[], char *envp[] ){   
+    struct sigaction sa;
+    sa.sa_sigaction = parent_handler;
+    sa.sa_flags = SA_RESTART; 
+    sigaction(SIGINT, &sa, 0);
+    
     shell_loop(envp);
     return 0;
 }
